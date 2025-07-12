@@ -3,7 +3,7 @@ const { body, validationResult, query } = require('express-validator');
 const Item = require('../models/Item');
 const User = require('../models/User');
 const { authenticateToken, optionalAuth, requireOwnership } = require('../middleware/auth');
-const { uploadMultiple, handleUploadError, deleteMultipleImages } = require('../middleware/upload');
+const { uploadMultiple, handleUploadError, processUploadedFiles } = require('../middleware/upload');
 
 const router = express.Router();
 
@@ -12,14 +12,28 @@ const router = express.Router();
 // @access  Public
 router.get('/', [
   optionalAuth,
+  // Middleware to clean empty strings before validation
+  (req, res, next) => {
+    console.log('Before cleaning - req.query:', req.query);
+    // Clean up empty string query parameters
+    Object.keys(req.query).forEach(key => {
+      if (req.query[key] === '') {
+        delete req.query[key];
+      }
+    });
+    console.log('After cleaning - req.query:', req.query);
+    next();
+  },
   query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
   query('limit').optional().isInt({ min: 1, max: 50 }).withMessage('Limit must be between 1 and 50'),
-  query('category').optional().isIn(['tops', 'bottoms', 'dresses', 'outerwear', 'shoes', 'accessories']),
-  query('size').optional().isIn(['XS', 'S', 'M', 'L', 'XL', 'XXL', 'One Size']),
-  query('condition').optional().isIn(['new', 'like-new', 'good', 'fair', 'poor']),
-  query('minPoints').optional().isInt({ min: 0 }),
-  query('maxPoints').optional().isInt({ min: 0 }),
-  query('search').optional().trim()
+  query('category').optional().isIn(['tops', 'bottoms', 'dresses', 'outerwear', 'shoes', 'accessories']).withMessage('Invalid category'),
+  query('size').optional().isIn(['XS', 'S', 'M', 'L', 'XL', 'XXL', 'One Size']).withMessage('Invalid size'),
+  query('condition').optional().isIn(['new', 'like-new', 'good', 'fair', 'poor']).withMessage('Invalid condition'),
+  query('minPoints').optional().isInt({ min: 0 }).withMessage('Min points must be a non-negative integer'),
+  query('maxPoints').optional().isInt({ min: 0 }).withMessage('Max points must be a non-negative integer'),
+  query('search').optional().trim(),
+  query('sortBy').optional().isIn(['createdAt', 'title', 'pointsValue', 'views']).withMessage('Invalid sort field'),
+  query('sortOrder').optional().isIn(['asc', 'desc']).withMessage('Invalid sort order')
 ], async (req, res) => {
   try {
     // Check for validation errors
@@ -81,6 +95,8 @@ router.get('/', [
 
     // Get total count for pagination
     const total = await Item.countDocuments(filter);
+    
+
 
     // Add like status for authenticated users
     if (req.user) {
@@ -209,14 +225,31 @@ router.post('/', [
     .withMessage('Each tag must be less than 20 characters')
 ], async (req, res) => {
   try {
+    console.log('=== ITEM CREATION DEBUG ===');
+    console.log('Headers:', req.headers);
+    console.log('User object:', req.user);
+    console.log('Files:', req.files);
+    console.log('Body:', req.body);
+    
     // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log('Validation errors:', errors.array());
       return res.status(400).json({ 
         message: 'Validation failed',
         errors: errors.array() 
       });
     }
+
+    // Check if user is authenticated
+    if (!req.user) {
+      console.log('No user found in request');
+      return res.status(401).json({ 
+        message: 'Authentication required' 
+      });
+    }
+
+    console.log('User authenticated:', req.user.username);
 
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ 
@@ -224,11 +257,8 @@ router.post('/', [
       });
     }
 
-    // Process uploaded images
-    const images = req.files.map(file => ({
-      url: file.path,
-      publicId: file.filename
-    }));
+    // Process uploaded images to base64
+    const images = processUploadedFiles(req.files);
 
     // Create item
     const item = new Item({
@@ -239,11 +269,13 @@ router.post('/', [
     });
 
     await item.save();
+    console.log('Item saved successfully:', item._id);
 
     // Update user's items count
     await User.findByIdAndUpdate(req.user._id, {
       $inc: { itemsCount: 1 }
     });
+    console.log('User items count updated for user:', req.user._id);
 
     // Populate owner info
     await item.populate('owner', 'username firstName lastName avatar');
@@ -255,12 +287,6 @@ router.post('/', [
 
   } catch (error) {
     console.error('Create item error:', error);
-    
-    // Clean up uploaded images if item creation fails
-    if (req.files && req.files.length > 0) {
-      const publicIds = req.files.map(file => file.filename);
-      await deleteMultipleImages(publicIds);
-    }
     
     res.status(500).json({ 
       message: 'Error creating item' 

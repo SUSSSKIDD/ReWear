@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useQuery } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 import { 
   Search, 
   Filter, 
@@ -36,6 +37,14 @@ const ItemsPage = () => {
     queryFn: () => itemsAPI.getAll(filters),
     keepPreviousData: true
   })
+
+  // Debug logging
+  console.log('ItemsPage - filters:', filters);
+  console.log('ItemsPage - data:', data);
+  console.log('ItemsPage - error:', error);
+  console.log('ItemsPage - items length:', data?.data?.items?.length);
+
+
 
   // Update URL when filters change
   useEffect(() => {
@@ -82,9 +91,31 @@ const ItemsPage = () => {
           <h1 className="text-3xl font-bold text-secondary-900 mb-2">
             Browse Items
           </h1>
-          <p className="text-secondary-600">
+          <p className="text-secondary-600 mb-4">
             Discover clothing items from our community
           </p>
+          
+          {/* Quick Navigation */}
+          <div className="flex flex-wrap gap-2">
+            <Link
+              to="/dashboard"
+              className="inline-flex items-center px-3 py-2 text-sm font-medium text-secondary-600 bg-secondary-50 rounded-lg hover:bg-secondary-100 transition-colors"
+            >
+              Dashboard
+            </Link>
+            <Link
+              to="/swaps"
+              className="inline-flex items-center px-3 py-2 text-sm font-medium text-secondary-600 bg-secondary-50 rounded-lg hover:bg-secondary-100 transition-colors"
+            >
+              Swaps
+            </Link>
+            <Link
+              to="/add-item"
+              className="inline-flex items-center px-3 py-2 text-sm font-medium text-primary-600 bg-primary-50 rounded-lg hover:bg-primary-100 transition-colors"
+            >
+              + Add Item
+            </Link>
+          </div>
         </div>
 
         {/* Search and Filters Bar */}
@@ -214,7 +245,7 @@ const ItemsPage = () => {
               <div className="text-center py-12">
                 <p className="text-secondary-600">Error loading items</p>
               </div>
-            ) : data?.items?.length === 0 ? (
+            ) : data?.data?.items?.length === 0 ? (
               <div className="text-center py-12">
                 <Package className="w-12 h-12 text-secondary-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-secondary-900 mb-2">
@@ -229,7 +260,7 @@ const ItemsPage = () => {
                 {/* Results Count */}
                 <div className="flex justify-between items-center mb-6">
                   <p className="text-secondary-600">
-                    {data?.pagination?.totalItems || 0} items found
+                    {data?.data?.pagination?.totalItems || 0} items found
                   </p>
                   <select
                     value={`${filters.sortBy}-${filters.sortOrder}`}
@@ -253,29 +284,29 @@ const ItemsPage = () => {
                     ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
                     : 'grid-cols-1'
                 }`}>
-                  {data?.items?.map((item) => (
+                  {data?.data?.items?.map((item) => (
                     <ItemCard key={item._id} item={item} viewMode={viewMode} />
                   ))}
                 </div>
 
                 {/* Pagination */}
-                {data?.pagination && data.pagination.totalPages > 1 && (
+                {data?.data?.pagination && data.data.pagination.totalPages > 1 && (
                   <div className="flex justify-center mt-8">
                     <div className="flex items-center space-x-2">
                       <button
-                        onClick={() => handleFilterChange({ page: data.pagination.currentPage - 1 })}
-                        disabled={!data.pagination.hasPrev}
+                        onClick={() => handleFilterChange({ page: data.data.pagination.currentPage - 1 })}
+                        disabled={!data.data.pagination.hasPrev}
                         className="btn btn-outline btn-sm"
                       >
                         Previous
                       </button>
                       
-                      {Array.from({ length: data.pagination.totalPages }, (_, i) => i + 1).map((page) => (
+                      {Array.from({ length: data.data.pagination.totalPages }, (_, i) => i + 1).map((page) => (
                         <button
                           key={page}
                           onClick={() => handleFilterChange({ page })}
                           className={`btn btn-sm ${
-                            page === data.pagination.currentPage 
+                            page === data.data.pagination.currentPage 
                               ? 'btn-primary' 
                               : 'btn-outline'
                           }`}
@@ -285,8 +316,8 @@ const ItemsPage = () => {
                       ))}
                       
                       <button
-                        onClick={() => handleFilterChange({ page: data.pagination.currentPage + 1 })}
-                        disabled={!data.pagination.hasNext}
+                        onClick={() => handleFilterChange({ page: data.data.pagination.currentPage + 1 })}
+                        disabled={!data.data.pagination.hasNext}
                         className="btn btn-outline btn-sm"
                       >
                         Next

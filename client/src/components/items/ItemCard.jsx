@@ -4,6 +4,7 @@ import { Heart, Eye, MapPin, Star, Package } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { itemsAPI } from '../../services/api'
+import { getImageUrl } from '../../utils/imageUtils'
 import Avatar from '../common/Avatar'
 import LoadingSpinner from '../common/LoadingSpinner'
 
@@ -11,6 +12,21 @@ const ItemCard = ({ item, viewMode = 'grid' }) => {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const [imageIndex, setImageIndex] = useState(0)
+
+  // Debug logging
+  console.log('ItemCard - item:', item);
+  console.log('ItemCard - item._id:', item?._id);
+
+  // Safety check for undefined item
+  if (!item || !item._id) {
+    return (
+      <div className="card">
+        <div className="p-4 text-center text-secondary-600">
+          Item not available
+        </div>
+      </div>
+    )
+  }
 
   const likeMutation = useMutation({
     mutationFn: () => itemsAPI.toggleLike(item._id),
@@ -44,13 +60,13 @@ const ItemCard = ({ item, viewMode = 'grid' }) => {
 
   if (viewMode === 'list') {
     return (
-      <Link to={`/items/${item._id}`} className="block">
+      <Link to={`/items/${item._id || 'unknown'}`} className="block">
         <div className="card hover:shadow-medium transition-shadow">
           <div className="flex">
             {/* Image */}
             <div className="w-32 h-32 flex-shrink-0">
               <img
-                src={item.images[imageIndex]?.url || item.images[0]?.url}
+                src={getImageUrl(item.images?.[imageIndex] || item.images?.[0], item._id, imageIndex)}
                 alt={item.title}
                 className="w-full h-full object-cover rounded-l-lg"
                 onError={(e) => {
@@ -138,12 +154,12 @@ const ItemCard = ({ item, viewMode = 'grid' }) => {
   }
 
   return (
-    <Link to={`/items/${item._id}`} className="block group">
+    <Link to={`/items/${item._id || 'unknown'}`} className="block group">
       <div className="card hover:shadow-medium transition-shadow">
         {/* Image Container */}
         <div className="relative aspect-square overflow-hidden rounded-t-lg">
           <img
-            src={item.images[imageIndex]?.url || item.images[0]?.url}
+            src={getImageUrl(item.images?.[imageIndex] || item.images?.[0], item._id, imageIndex)}
             alt={item.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             onError={(e) => {
@@ -152,7 +168,7 @@ const ItemCard = ({ item, viewMode = 'grid' }) => {
           />
           
           {/* Image Navigation */}
-          {item.images.length > 1 && (
+          {item.images?.length > 1 && (
             <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-1">
               {item.images.map((_, index) => (
                 <button

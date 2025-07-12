@@ -2,13 +2,16 @@ import { useState } from 'react'
 import { X, Package, Heart } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { swapsAPI } from '../../services/api'
+import { getImageUrl } from '../../utils/imageUtils'
 import LoadingSpinner from '../common/LoadingSpinner'
+import { useAuth } from '../../hooks/useAuth'
 
-const SwapModal = ({ item, onClose }) => {
-  const [swapType, setSwapType] = useState('direct')
+const SwapModal = ({ item, onClose, actionType = 'swap' }) => {
+  const [swapType, setSwapType] = useState(actionType === 'redeem' ? 'points' : 'direct')
   const [selectedItems, setSelectedItems] = useState([])
   const [message, setMessage] = useState('')
   const queryClient = useQueryClient()
+  const { user } = useAuth()
 
   const createSwapMutation = useMutation({
     mutationFn: (data) => swapsAPI.create(data),
@@ -38,7 +41,7 @@ const SwapModal = ({ item, onClose }) => {
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-secondary-200">
           <h2 className="text-xl font-semibold text-secondary-900">
-            Request Swap
+            {actionType === 'redeem' ? 'Redeem with Points' : 'Request Swap'}
           </h2>
           <button
             onClick={onClose}
@@ -53,7 +56,7 @@ const SwapModal = ({ item, onClose }) => {
           {/* Item Preview */}
           <div className="flex items-center space-x-4 p-4 bg-secondary-50 rounded-lg">
             <img
-              src={item.images[0]?.url}
+              src={getImageUrl(item.images?.[0], item._id, 0)}
               alt={item.title}
               className="w-16 h-16 object-cover rounded-lg"
             />
@@ -70,44 +73,79 @@ const SwapModal = ({ item, onClose }) => {
           </div>
 
           {/* Swap Type Selection */}
-          <div>
-            <h3 className="font-medium text-secondary-900 mb-3">Swap Type</h3>
-            <div className="space-y-3">
-              <label className="flex items-center p-3 border border-secondary-200 rounded-lg cursor-pointer hover:border-primary-300 transition-colors">
-                <input
-                  type="radio"
-                  name="swapType"
-                  value="direct"
-                  checked={swapType === 'direct'}
-                  onChange={(e) => setSwapType(e.target.value)}
-                  className="w-4 h-4 text-primary-600 border-secondary-300 focus:ring-primary-500"
-                />
-                <div className="ml-3">
-                  <div className="font-medium text-secondary-900">Direct Swap</div>
-                  <div className="text-sm text-secondary-600">
-                    Exchange with items from your wardrobe
+          {actionType !== 'redeem' && (
+            <div>
+              <h3 className="font-medium text-secondary-900 mb-3">Swap Type</h3>
+              <div className="space-y-3">
+                <label className="flex items-center p-3 border border-secondary-200 rounded-lg cursor-pointer hover:border-primary-300 transition-colors">
+                  <input
+                    type="radio"
+                    name="swapType"
+                    value="direct"
+                    checked={swapType === 'direct'}
+                    onChange={(e) => setSwapType(e.target.value)}
+                    className="w-4 h-4 text-primary-600 border-secondary-300 focus:ring-primary-500"
+                  />
+                  <div className="ml-3">
+                    <div className="font-medium text-secondary-900">Direct Swap</div>
+                    <div className="text-sm text-secondary-600">
+                      Exchange with items from your wardrobe
+                    </div>
                   </div>
-                </div>
-              </label>
+                </label>
 
-              <label className="flex items-center p-3 border border-secondary-200 rounded-lg cursor-pointer hover:border-primary-300 transition-colors">
-                <input
-                  type="radio"
-                  name="swapType"
-                  value="points"
-                  checked={swapType === 'points'}
-                  onChange={(e) => setSwapType(e.target.value)}
-                  className="w-4 h-4 text-primary-600 border-secondary-300 focus:ring-primary-500"
-                />
-                <div className="ml-3">
-                  <div className="font-medium text-secondary-900">Points Swap</div>
-                  <div className="text-sm text-secondary-600">
-                    Use your points balance ({item.pointsValue} points)
+                <label className="flex items-center p-3 border border-secondary-200 rounded-lg cursor-pointer hover:border-primary-300 transition-colors">
+                  <input
+                    type="radio"
+                    name="swapType"
+                    value="points"
+                    checked={swapType === 'points'}
+                    onChange={(e) => setSwapType(e.target.value)}
+                    className="w-4 h-4 text-primary-600 border-secondary-300 focus:ring-primary-500"
+                  />
+                  <div className="ml-3">
+                    <div className="font-medium text-secondary-900">Points Swap</div>
+                    <div className="text-sm text-secondary-600">
+                      Use your points balance ({item.pointsValue} points)
+                    </div>
                   </div>
-                </div>
-              </label>
+                </label>
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Points Redemption Info */}
+          {actionType === 'redeem' && (
+            <div className="bg-primary-50 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-medium text-secondary-900">Item Cost:</span>
+                <span className="text-lg font-bold text-primary-600">{item.pointsValue.toLocaleString()} points</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="font-medium text-secondary-900">Your Balance:</span>
+                <span className="text-lg font-bold text-secondary-900">{user?.points || 0} points</span>
+              </div>
+              <div className={`mt-3 p-3 rounded-lg ${
+                (user?.points || 0) >= item.pointsValue 
+                  ? 'bg-green-50 border border-green-200' 
+                  : 'bg-red-50 border border-red-200'
+              }`}>
+                <div className={`flex items-center ${
+                  (user?.points || 0) >= item.pointsValue ? 'text-green-800' : 'text-red-800'
+                }`}>
+                  <div className={`w-2 h-2 rounded-full mr-2 ${
+                    (user?.points || 0) >= item.pointsValue ? 'bg-green-500' : 'bg-red-500'
+                  }`}></div>
+                  <span className="text-sm font-medium">
+                    {(user?.points || 0) >= item.pointsValue 
+                      ? 'Sufficient points available' 
+                      : 'Insufficient points balance'
+                    }
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Direct Swap Items Selection */}
           {swapType === 'direct' && (
@@ -159,13 +197,13 @@ const SwapModal = ({ item, onClose }) => {
             </button>
             <button
               type="submit"
-              disabled={createSwapMutation.isLoading}
+              disabled={createSwapMutation.isLoading || (actionType === 'redeem' && (user?.points || 0) < item.pointsValue)}
               className="btn btn-primary flex-1"
             >
               {createSwapMutation.isLoading ? (
                 <LoadingSpinner size="sm" />
               ) : (
-                'Send Request'
+                actionType === 'redeem' ? 'Redeem Item' : 'Send Request'
               )}
             </button>
           </div>

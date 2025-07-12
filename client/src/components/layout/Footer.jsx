@@ -62,11 +62,7 @@ const Footer = () => {
                   My Swaps
                 </Link>
               </li>
-              <li>
-                <Link to="/profile" className="text-secondary-300 hover:text-white transition-colors">
-                  Profile
-                </Link>
-              </li>
+
             </ul>
           </div>
 

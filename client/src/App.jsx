@@ -13,7 +13,6 @@ import DashboardPage from './pages/Dashboard/DashboardPage'
 import ItemsPage from './pages/Items/ItemsPage'
 import ItemDetailPage from './pages/Items/ItemDetailPage'
 import AddItemPage from './pages/Items/AddItemPage'
-import ProfilePage from './pages/Profile/ProfilePage'
 import SwapsPage from './pages/Swaps/SwapsPage'
 import SwapDetailPage from './pages/Swaps/SwapDetailPage'
 import NotFoundPage from './pages/NotFoundPage'
@@ -37,15 +36,18 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
-        <Route path="/items" element={<ItemsPage />} />
-        <Route path="/items/:id" element={<ItemDetailPage />} />
+        
+        {/* Routes with Layout (includes Header navigation) */}
+        <Route element={<Layout />}>
+          <Route path="/items" element={<ItemsPage />} />
+          <Route path="/items/:id" element={<ItemDetailPage />} />
+        </Route>
         
         {/* Protected Routes */}
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/add-item" element={<AddItemPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
             <Route path="/swaps" element={<SwapsPage />} />
             <Route path="/swaps/:id" element={<SwapDetailPage />} />
           </Route>

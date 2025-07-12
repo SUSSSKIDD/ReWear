@@ -11,6 +11,7 @@ import {
   Calendar
 } from 'lucide-react'
 import { swapsAPI } from '../../services/api'
+import { getImageUrl } from '../../utils/imageUtils'
 import Avatar from '../common/Avatar'
 import LoadingSpinner from '../common/LoadingSpinner'
 
@@ -63,7 +64,7 @@ const SwapCard = ({ swap, type, statusIcon, statusColor }) => {
         {/* Item Image */}
         <div className="flex-shrink-0">
           <img
-            src={swap.requestedItem.images[0]?.url}
+            src={getImageUrl(swap.requestedItem.images?.[0], swap.requestedItem._id, 0)}
             alt={swap.requestedItem.title}
             className="w-20 h-20 object-cover rounded-lg"
             onError={(e) => {
@@ -107,7 +108,7 @@ const SwapCard = ({ swap, type, statusIcon, statusColor }) => {
                     {swap.offeredItems.map((item, index) => (
                       <img
                         key={index}
-                        src={item.images[0]?.url}
+                        src={getImageUrl(item.images?.[0], item._id, 0)}
                         alt={item.title}
                         className="w-12 h-12 object-cover rounded border border-secondary-200"
                       />

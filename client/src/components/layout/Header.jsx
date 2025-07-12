@@ -4,12 +4,9 @@ import { useAuth } from '../../hooks/useAuth'
 import { 
   Menu, 
   X, 
-  User, 
   LogOut, 
   Settings, 
   Plus,
-  Heart,
-  MessageSquare,
   Bell
 } from 'lucide-react'
 import Avatar from '../common/Avatar'
@@ -22,8 +19,11 @@ const Header = () => {
 
   const navigation = [
     { name: 'Browse', href: '/items' },
-    { name: 'Dashboard', href: '/dashboard' },
     { name: 'Swaps', href: '/swaps' },
+  ]
+
+  const userNavigation = [
+    { name: 'Dashboard', href: '/dashboard' },
   ]
 
   const isActive = (path) => location.pathname === path
@@ -48,6 +48,19 @@ const Header = () => {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex space-x-8">
             {navigation.map((item) => (
+              <Link
+                key={item.name}
+                to={item.href}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  isActive(item.href)
+                    ? 'text-primary-600 bg-primary-50'
+                    : 'text-secondary-600 hover:text-secondary-900 hover:bg-secondary-50'
+                }`}
+              >
+                {item.name}
+              </Link>
+            ))}
+            {user && userNavigation.map((item) => (
               <Link
                 key={item.name}
                 to={item.href}
@@ -93,31 +106,23 @@ const Header = () => {
 
                 {/* User Dropdown */}
                 {isUserMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-secondary-200 py-1 z-50">
-                    <Link
-                      to="/profile"
-                      className="flex items-center space-x-2 px-4 py-2 text-sm text-secondary-700 hover:bg-secondary-50"
-                      onClick={() => setIsUserMenuOpen(false)}
-                    >
-                      <User className="w-4 h-4" />
-                      <span>Profile</span>
-                    </Link>
-                    <Link
-                      to="/dashboard"
-                      className="flex items-center space-x-2 px-4 py-2 text-sm text-secondary-700 hover:bg-secondary-50"
-                      onClick={() => setIsUserMenuOpen(false)}
-                    >
-                      <Settings className="w-4 h-4" />
-                      <span>Dashboard</span>
-                    </Link>
-                    <button
-                      onClick={handleLogout}
-                      className="flex items-center space-x-2 px-4 py-2 text-sm text-secondary-700 hover:bg-secondary-50 w-full text-left"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      <span>Logout</span>
-                    </button>
-                  </div>
+                                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-secondary-200 py-1 z-50">
+                  <Link
+                    to="/dashboard"
+                    className="flex items-center space-x-2 px-4 py-2 text-sm text-secondary-700 hover:bg-secondary-50"
+                    onClick={() => setIsUserMenuOpen(false)}
+                  >
+                    <Settings className="w-4 h-4" />
+                    <span>Dashboard</span>
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center space-x-2 px-4 py-2 text-sm text-secondary-700 hover:bg-secondary-50 w-full text-left"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Logout</span>
+                  </button>
+                </div>
                 )}
               </div>
             ) : (
@@ -166,14 +171,30 @@ const Header = () => {
                 </Link>
               ))}
               {user && (
-                <Link
-                  to="/add-item"
-                  className="flex items-center space-x-2 px-3 py-2 text-base font-medium text-secondary-600 hover:text-secondary-900 hover:bg-secondary-50 rounded-md transition-colors"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Add Item</span>
-                </Link>
+                <>
+                  {userNavigation.map((item) => (
+                    <Link
+                      key={item.name}
+                      to={item.href}
+                      className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
+                        isActive(item.href)
+                          ? 'text-primary-600 bg-primary-50'
+                          : 'text-secondary-600 hover:text-secondary-900 hover:bg-secondary-50'
+                      }`}
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      {item.name}
+                    </Link>
+                  ))}
+                  <Link
+                    to="/add-item"
+                    className="flex items-center space-x-2 px-3 py-2 text-base font-medium text-secondary-600 hover:text-secondary-900 hover:bg-secondary-50 rounded-md transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add Item</span>
+                  </Link>
+                </>
               )}
             </nav>
           </div>

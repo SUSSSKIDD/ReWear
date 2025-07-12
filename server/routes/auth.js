@@ -3,7 +3,7 @@ const { body, validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { authenticateToken } = require('../middleware/auth');
-const { uploadSingle, handleUploadError } = require('../middleware/upload');
+const { uploadSingle, handleUploadError, processSingleFile } = require('../middleware/upload');
 
 const router = express.Router();
 
@@ -236,26 +236,19 @@ router.post('/avatar', authenticateToken, uploadSingle, handleUploadError, async
       });
     }
 
-    // Delete old avatar if exists
-    if (req.user.avatar) {
-      const { deleteImage } = require('../middleware/upload');
-      try {
-        await deleteImage(req.user.avatar);
-      } catch (error) {
-        console.error('Error deleting old avatar:', error);
-      }
-    }
+    // Process uploaded file to base64
+    const processedAvatar = processSingleFile(req.file);
 
     // Update user with new avatar
     const updatedUser = await User.findByIdAndUpdate(
       req.user._id,
-      { avatar: req.file.path },
+      { avatar: processedAvatar },
       { new: true }
     ).select('-password');
 
     res.json({
       message: 'Avatar uploaded successfully',
-      avatar: req.file.path,
+      avatar: processedAvatar,
       user: updatedUser.getPublicProfile()
     });
 

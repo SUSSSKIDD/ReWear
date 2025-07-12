@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { swapsAPI } from '../../services/api'
 import { useAuth } from '../../hooks/useAuth'
+import { getImageUrl } from '../../utils/imageUtils'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import Avatar from '../../components/common/Avatar'
 
@@ -157,7 +158,7 @@ const SwapDetailPage = () => {
             
             <div className="flex items-start space-x-4">
               <img
-                src={swap.requestedItem.images[0]?.url}
+                src={getImageUrl(swap.requestedItem.images?.[0], swap.requestedItem._id, 0)}
                 alt={swap.requestedItem.title}
                 className="w-24 h-24 object-cover rounded-lg"
                 onError={(e) => {
@@ -230,7 +231,7 @@ const SwapDetailPage = () => {
                   {swap.offeredItems.map((item, index) => (
                     <div key={index} className="flex items-center space-x-3 p-3 bg-secondary-50 rounded-lg">
                       <img
-                        src={item.images[0]?.url}
+                        src={getImageUrl(item.images?.[0], item._id, 0)}
                         alt={item.title}
                         className="w-12 h-12 object-cover rounded"
                       />

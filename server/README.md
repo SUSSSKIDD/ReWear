@@ -9,7 +9,7 @@ Backend API for the ReWear Community Clothing Exchange platform.
 - **Swap System**: Direct item swaps and point-based redemptions
 - **Admin Panel**: Item moderation and user management
 - **Points System**: Virtual currency for item exchanges
-- **Image Upload**: Cloudinary integration for image storage
+- **Image Upload**: Base64 storage in MongoDB Atlas
 - **Search & Filtering**: Advanced search with multiple filters
 - **Rating System**: User ratings and reviews
 
@@ -20,7 +20,7 @@ Backend API for the ReWear Community Clothing Exchange platform.
 - **MongoDB** - Database (MongoDB Atlas)
 - **Mongoose** - ODM for MongoDB
 - **JWT** - Authentication
-- **Cloudinary** - Image storage
+- **Base64 Storage** - Image storage in MongoDB
 - **Multer** - File upload handling
 - **Express Validator** - Input validation
 - **bcryptjs** - Password hashing
@@ -31,7 +31,6 @@ Backend API for the ReWear Community Clothing Exchange platform.
 
 - Node.js (v16 or higher)
 - MongoDB Atlas account
-- Cloudinary account
 - npm or yarn
 
 ## Installation
@@ -55,9 +54,6 @@ Backend API for the ReWear Community Clothing Exchange platform.
    NODE_ENV=development
    MONGODB_URI=mongodb+srv://your_username:your_password@your_cluster.mongodb.net/rewear
    JWT_SECRET=your_jwt_secret_key_here
-   CLOUDINARY_CLOUD_NAME=your_cloud_name
-   CLOUDINARY_API_KEY=your_api_key
-   CLOUDINARY_API_SECRET=your_api_secret
    CLIENT_URL=http://localhost:3000
    ```
 
@@ -161,10 +157,31 @@ Backend API for the ReWear Community Clothing Exchange platform.
 
 ## File Upload
 
-- Cloudinary integration
+- Base64 storage in MongoDB Atlas
 - Multiple image support
 - File size and type validation
 - Automatic cleanup on errors
+
+## Migration from Cloudinary
+
+If you're migrating from a previous version that used Cloudinary, you can convert existing images to the new base64 format:
+
+```bash
+# Migrate all images (items and avatars)
+npm run migrate
+
+# Migrate only item images
+npm run migrate:items
+
+# Migrate only user avatars
+npm run migrate:users
+```
+
+The migration script will:
+1. Download images from Cloudinary URLs
+2. Convert them to base64 format
+3. Store them in MongoDB Atlas
+4. Preserve original images if conversion fails
 
 ## Development
 
@@ -172,6 +189,10 @@ Backend API for the ReWear Community Clothing Exchange platform.
 - `npm run dev` - Start development server with nodemon
 - `npm start` - Start production server
 - `npm test` - Run tests (to be implemented)
+- `npm run migrate` - Run full image migration (Cloudinary to base64)
+- `npm run migrate:items` - Migrate only item images
+- `npm run migrate:users` - Migrate only user avatars
+- `npm run migrate:all` - Run full migration (same as migrate)
 
 ### Code Structure
 ```
@@ -192,7 +213,6 @@ server/
    - Set `NODE_ENV=production`
    - Configure production MongoDB URI
    - Set secure JWT secret
-   - Configure Cloudinary credentials
 
 2. **Database**
    - Ensure MongoDB Atlas is properly configured

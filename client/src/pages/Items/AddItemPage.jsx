@@ -3,13 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { useForm } from 'react-hook-form'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { 
-  Upload, 
-  X, 
-  Package,
-  Camera,
-  Plus
-} from 'lucide-react'
+import { X, Camera, Plus, Package } from 'lucide-react'
+import { motion } from 'framer-motion'
+import toast from 'react-hot-toast'
 import { itemsAPI } from '../../services/api'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 
@@ -23,17 +19,29 @@ const AddItemPage = () => {
     register,
     handleSubmit,
     formState: { errors },
-    setError,
-    watch,
-    reset
+    setError
   } = useForm()
 
   const createItemMutation = useMutation({
     mutationFn: (data) => itemsAPI.create(data),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries(['items'])
-      queryClient.invalidateQueries(['userItems'])
-      navigate(`/items/${data.item._id}`)
+    onSuccess: async (data) => {
+      console.log('Item created successfully:', data)
+      
+      // Invalidate all related queries to refresh data
+      console.log('Invalidating queries...')
+      await Promise.all([
+        queryClient.invalidateQueries(['items']),
+        queryClient.invalidateQueries(['userItems']),
+        queryClient.invalidateQueries(['userStats']),
+        queryClient.invalidateQueries(['userActivity'])
+      ])
+      console.log('Queries invalidated')
+      
+      // Show success message
+      toast.success('Item added successfully!')
+      
+      // Redirect to dashboard to show updated statistics
+      navigate('/dashboard', { state: { fromAddItem: true } })
     },
     onError: (error) => {
       setError('root', {
@@ -45,8 +53,8 @@ const AddItemPage = () => {
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files)
-    const validFiles = files.filter(file => 
-      file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024 // 5MB limit
+    const validFiles = files.filter(file =>
+      file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024
     )
 
     if (validFiles.length + images.length > 5) {
@@ -75,22 +83,25 @@ const AddItemPage = () => {
 
     setUploading(true)
     try {
-      // Upload images first
-      const imageUrls = await Promise.all(
-        images.map(image => itemsAPI.uploadImage(image))
-      )
+      // Create FormData with images and item data
+      const formData = new FormData()
+      
+      // Add images
+      images.forEach((image, index) => {
+        formData.append('images', image)
+      })
+      
+      // Add item data
+      Object.keys(data).forEach(key => {
+        formData.append(key, data[key])
+      })
 
-      // Create item with image URLs
-      const itemData = {
-        ...data,
-        images: imageUrls.map(url => ({ url }))
-      }
-
-      createItemMutation.mutate(itemData)
+      // Create item with FormData
+      createItemMutation.mutate(formData)
     } catch (error) {
       setError('root', {
         type: 'manual',
-        message: 'Failed to upload images'
+        message: 'Failed to create item'
       })
     } finally {
       setUploading(false)
@@ -103,356 +114,310 @@ const AddItemPage = () => {
     { value: 'dresses', label: 'Dresses' },
     { value: 'outerwear', label: 'Outerwear' },
     { value: 'shoes', label: 'Shoes' },
-    { value: 'accessories', label: 'Accessories' }
+    { value: 'accessories', label: 'Accessories' } // Fixed typo from 'accessories' to 'accessories'
   ]
 
-  const sizes = [
-    { value: 'XS', label: 'XS' },
-    { value: 'S', label: 'S' },
-    { value: 'M', label: 'M' },
-    { value: 'L', label: 'L' },
-    { value: 'XL', label: 'XL' },
-    { value: 'XXL', label: 'XXL' },
-    { value: 'One Size', label: 'One Size' }
-  ]
-
-  const conditions = [
-    { value: 'new', label: 'New' },
-    { value: 'like-new', label: 'Like New' },
-    { value: 'good', label: 'Good' },
-    { value: 'fair', label: 'Fair' },
-    { value: 'poor', label: 'Poor' }
-  ]
+  const sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'One Size']
+  const conditions = ['new', 'like-new', 'good', 'fair', 'poor']
 
   return (
-    <>
-      <Helmet>
-        <title>Add Item - ReWear</title>
-        <meta name="description" content="Add a new item to your ReWear wardrobe" />
-      </Helmet>
+    <div className="relative min-h-screen">
+      {/* Background image with low opacity */}
+      <div className="absolute inset-0 -z-10 overflow-hidden">
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1483985988355-763728e1935b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2000&q=80')] bg-cover bg-center opacity-30"></div>
+      </div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-secondary-900 mb-2">
+      <motion.div
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12"
+      >
+        <Helmet>
+          <title>Add Item - ReWear</title>
+          <meta name="description" content="Add a new item to your ReWear wardrobe" />
+        </Helmet>
+
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="mb-10 text-center"
+        >
+          <h1 className="text-4xl font-bold text-indigo-700 mb-3">
             Add New Item
           </h1>
-          <p className="text-secondary-600">
-            Share your clothing with the ReWear community
-          </p>
-        </div>
+          <p className="text-lg text-gray-600">Share your clothing with the ReWear community</p>
+        </motion.div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-          {/* Images Section */}
-          <div className="card">
-            <div className="card-header">
-              <h3 className="card-title">Item Photos</h3>
-              <p className="card-description">
-                Upload up to 5 photos of your item (max 5MB each)
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              {/* Image Upload */}
-              <div className="border-2 border-dashed border-secondary-300 rounded-lg p-6 text-center">
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                  id="image-upload"
-                  disabled={images.length >= 5}
-                />
-                <label
-                  htmlFor="image-upload"
-                  className="cursor-pointer block"
-                >
-                  <Camera className="w-12 h-12 text-secondary-400 mx-auto mb-4" />
-                  <p className="text-secondary-600 mb-2">
-                    Click to upload images or drag and drop
-                  </p>
-                  <p className="text-sm text-secondary-500">
-                    PNG, JPG up to 5MB each
-                  </p>
-                </label>
+          {/* Upload Section */}
+          <motion.div 
+            whileHover={{ scale: 1.01 }} 
+            className="bg-white/90 backdrop-blur-sm p-8 rounded-xl shadow-lg border border-white/50"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-800">Item Photos</h3>
+                <p className="text-sm text-gray-500">Upload up to 5 images</p>
               </div>
-
-              {/* Image Preview */}
-              {images.length > 0 && (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                  {images.map((image, index) => (
-                    <div key={index} className="relative aspect-square">
-                      <img
-                        src={URL.createObjectURL(image)}
-                        alt={`Preview ${index + 1}`}
-                        className="w-full h-full object-cover rounded-lg"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeImage(index)}
-                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
+              <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                <Camera className="w-5 h-5 text-indigo-600" />
+              </div>
+            </div>
+            
+            <div className="border-2 border-dashed border-indigo-200 p-8 rounded-lg text-center bg-indigo-50/50 hover:bg-indigo-50 transition cursor-pointer">
+              <input
+                id="image-upload"
+                type="file"
+                multiple
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageUpload}
+                disabled={images.length >= 5}
+              />
+              <label htmlFor="image-upload" className="cursor-pointer block">
+                <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Plus className="w-8 h-8 text-indigo-600" />
                 </div>
-              )}
-
-              {errors.images && (
-                <p className="text-sm text-red-600">{errors.images.message}</p>
-              )}
-            </div>
-          </div>
-
-          {/* Basic Information */}
-          <div className="card">
-            <div className="card-header">
-              <h3 className="card-title">Basic Information</h3>
-              <p className="card-description">
-                Tell us about your item
-              </p>
+                <p className="text-sm text-gray-600 font-medium">Drag & drop images here</p>
+                <p className="text-xs text-gray-500 mt-1">or click to browse</p>
+              </label>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Title */}
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-secondary-700 mb-2">
-                  Item Title *
-                </label>
-                <input
-                  type="text"
-                  className={`input ${errors.title ? 'border-red-500' : ''}`}
-                  placeholder="e.g., Vintage Denim Jacket"
-                  {...register('title', {
-                    required: 'Title is required',
-                    minLength: {
-                      value: 3,
-                      message: 'Title must be at least 3 characters'
-                    },
-                    maxLength: {
-                      value: 100,
-                      message: 'Title must be less than 100 characters'
-                    }
-                  })}
-                />
-                {errors.title && (
-                  <p className="mt-1 text-sm text-red-600">{errors.title.message}</p>
-                )}
+            {images.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-8">
+                {images.map((image, index) => (
+                  <motion.div 
+                    key={index} 
+                    className="relative group"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <img
+                      src={URL.createObjectURL(image)}
+                      alt="preview"
+                      className="w-full h-48 object-cover rounded-lg shadow-sm group-hover:shadow-md transition"
+                    />
+                    <motion.button
+                      type="button"
+                      onClick={() => removeImage(index)}
+                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition shadow-md"
+                      whileHover={{ scale: 1.1 }}
+                    >
+                      <X className="w-4 h-4" />
+                    </motion.button>
+                  </motion.div>
+                ))}
               </div>
+            )}
+            {errors.images && (
+              <motion.p 
+                className="text-sm text-red-600 mt-4 text-center"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                {errors.images.message}
+              </motion.p>
+            )}
+          </motion.div>
 
-              {/* Category */}
-              <div>
-                <label className="block text-sm font-medium text-secondary-700 mb-2">
-                  Category *
-                </label>
-                <select
-                  className={`select ${errors.category ? 'border-red-500' : ''}`}
-                  {...register('category', {
-                    required: 'Category is required'
-                  })}
-                >
-                  <option value="">Select category</option>
-                  {categories.map((category) => (
-                    <option key={category.value} value={category.value}>
-                      {category.label}
-                    </option>
-                  ))}
-                </select>
-                {errors.category && (
-                  <p className="mt-1 text-sm text-red-600">{errors.category.message}</p>
-                )}
+          {/* Basic Info */}
+          <motion.div 
+            whileHover={{ scale: 1.01 }} 
+            className="bg-white/90 backdrop-blur-sm p-8 rounded-xl shadow-lg border border-white/50 space-y-6"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xl font-semibold text-gray-800">Basic Info</h3>
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                <Package className="w-5 h-5 text-blue-600" />
               </div>
-
-              {/* Size */}
-              <div>
-                <label className="block text-sm font-medium text-secondary-700 mb-2">
-                  Size *
-                </label>
-                <select
-                  className={`select ${errors.size ? 'border-red-500' : ''}`}
-                  {...register('size', {
-                    required: 'Size is required'
-                  })}
-                >
-                  <option value="">Select size</option>
-                  {sizes.map((size) => (
-                    <option key={size.value} value={size.value}>
-                      {size.label}
-                    </option>
-                  ))}
-                </select>
-                {errors.size && (
-                  <p className="mt-1 text-sm text-red-600">{errors.size.message}</p>
-                )}
-              </div>
-
-              {/* Brand */}
-              <div>
-                <label className="block text-sm font-medium text-secondary-700 mb-2">
-                  Brand
-                </label>
-                <input
-                  type="text"
-                  className={`input ${errors.brand ? 'border-red-500' : ''}`}
-                  placeholder="e.g., Levi's, Nike"
-                  {...register('brand', {
-                    maxLength: {
-                      value: 50,
-                      message: 'Brand must be less than 50 characters'
-                    }
-                  })}
-                />
-                {errors.brand && (
-                  <p className="mt-1 text-sm text-red-600">{errors.brand.message}</p>
-                )}
-              </div>
-
-              {/* Condition */}
-              <div>
-                <label className="block text-sm font-medium text-secondary-700 mb-2">
-                  Condition *
-                </label>
-                <select
-                  className={`select ${errors.condition ? 'border-red-500' : ''}`}
-                  {...register('condition', {
-                    required: 'Condition is required'
-                  })}
-                >
-                  <option value="">Select condition</option>
-                  {conditions.map((condition) => (
-                    <option key={condition.value} value={condition.value}>
-                      {condition.label}
-                    </option>
-                  ))}
-                </select>
-                {errors.condition && (
-                  <p className="mt-1 text-sm text-red-600">{errors.condition.message}</p>
-                )}
-              </div>
-
-              {/* Points Value */}
-              <div>
-                <label className="block text-sm font-medium text-secondary-700 mb-2">
-                  Points Value *
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="10000"
-                  className={`input ${errors.pointsValue ? 'border-red-500' : ''}`}
-                  placeholder="e.g., 100"
-                  {...register('pointsValue', {
-                    required: 'Points value is required',
-                    min: {
-                      value: 1,
-                      message: 'Points value must be at least 1'
-                    },
-                    max: {
-                      value: 10000,
-                      message: 'Points value must be less than 10,000'
-                    }
-                  })}
-                />
-                {errors.pointsValue && (
-                  <p className="mt-1 text-sm text-red-600">{errors.pointsValue.message}</p>
-                )}
-              </div>
-
-              {/* Location */}
-              <div>
-                <label className="block text-sm font-medium text-secondary-700 mb-2">
-                  Location
-                </label>
-                <input
-                  type="text"
-                  className={`input ${errors.location ? 'border-red-500' : ''}`}
-                  placeholder="e.g., New York, NY"
-                  {...register('location', {
-                    maxLength: {
-                      value: 100,
-                      message: 'Location must be less than 100 characters'
-                    }
-                  })}
-                />
-                {errors.location && (
-                  <p className="mt-1 text-sm text-red-600">{errors.location.message}</p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Description */}
-          <div className="card">
-            <div className="card-header">
-              <h3 className="card-title">Description</h3>
-              <p className="card-description">
-                Tell potential swappers about your item
-              </p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-secondary-700 mb-2">
-                Description *
-              </label>
-              <textarea
-                rows={6}
-                className={`textarea ${errors.description ? 'border-red-500' : ''}`}
-                placeholder="Describe your item, including any details about style, material, fit, etc..."
-                {...register('description', {
-                  required: 'Description is required',
-                  minLength: {
-                    value: 10,
-                    message: 'Description must be at least 10 characters'
-                  },
-                  maxLength: {
-                    value: 1000,
-                    message: 'Description must be less than 1000 characters'
-                  }
-                })}
+              <label className="block text-sm font-medium text-gray-700 mb-2">Title *</label>
+              <input
+                type="text"
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                placeholder="e.g., Vintage Denim Jacket"
+                {...register('title', { required: 'Title is required' })}
               />
-              {errors.description && (
-                <p className="mt-1 text-sm text-red-600">{errors.description.message}</p>
+              {errors.title && (
+                <motion.p 
+                  className="text-sm text-red-600 mt-2"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                >
+                  {errors.title.message}
+                </motion.p>
               )}
             </div>
-          </div>
 
-          {/* Error Message */}
-          {errors.root && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-sm text-red-600">{errors.root.message}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Category *</label>
+                <select 
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                  {...register('category', { required: true })}
+                >
+                  <option value="">Select category</option>
+                  {categories.map(c => (
+                    <option key={c.value} value={c.value}>{c.label}</option>
+                  ))}
+                </select>
+                {errors.category && (
+                  <motion.p 
+                    className="text-sm text-red-600 mt-2"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                  >
+                    Category is required
+                  </motion.p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Size *</label>
+                <select 
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                  {...register('size', { required: true })}
+                >
+                  <option value="">Select size</option>
+                  {sizes.map(size => (
+                    <option key={size} value={size}>{size}</option>
+                  ))}
+                </select>
+                {errors.size && (
+                  <motion.p 
+                    className="text-sm text-red-600 mt-2"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                  >
+                    Size is required
+                  </motion.p>
+                )}
+              </div>
             </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Condition *</label>
+                <select 
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                  {...register('condition', { required: true })}
+                >
+                  <option value="">Select condition</option>
+                  {conditions.map(c => (
+                    <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+                  ))}
+                </select>
+                {errors.condition && (
+                  <motion.p 
+                    className="text-sm text-red-600 mt-2"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                  >
+                    Condition is required
+                  </motion.p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Points Value *</label>
+                <input
+                  type="number"
+                  min="1"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                  placeholder="100"
+                  {...register('pointsValue', { required: 'Points required' })}
+                />
+                {errors.pointsValue && (
+                  <motion.p 
+                    className="text-sm text-red-600 mt-2"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                  >
+                    {errors.pointsValue.message}
+                  </motion.p>
+                )}
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Description */}
+          <motion.div 
+            whileHover={{ scale: 1.01 }} 
+            className="bg-white/90 backdrop-blur-sm p-8 rounded-xl shadow-lg border border-white/50"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold text-gray-800">Description *</h3>
+              <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-purple-600" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+              </div>
+            </div>
+            
+            <textarea
+              rows={6}
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+              placeholder="Describe the item in detail (style, fit, material, wear, etc.)"
+              {...register('description', { required: 'Description is required' })}
+            />
+            {errors.description && (
+              <motion.p 
+                className="text-sm text-red-600 mt-2"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                {errors.description.message}
+              </motion.p>
+            )}
+          </motion.div>
+
+          {/* Submit */}
+          {errors.root && (
+            <motion.div 
+              className="bg-red-50 border-l-4 border-red-500 p-4 mb-6"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+            >
+              <p className="text-red-600 font-medium">{errors.root.message}</p>
+            </motion.div>
           )}
 
-          {/* Submit Buttons */}
-          <div className="flex justify-end space-x-4">
-            <button
+          <div className="flex justify-end gap-4">
+            <motion.button
               type="button"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => navigate(-1)}
-              className="btn btn-outline"
+              className="px-6 py-3 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition"
             >
               Cancel
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               type="submit"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               disabled={createItemMutation.isLoading || uploading}
-              className="btn btn-primary"
+              className="px-6 py-3 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition flex items-center justify-center gap-2"
             >
-              {(createItemMutation.isLoading || uploading) ? (
+              {uploading ? (
                 <LoadingSpinner size="sm" />
               ) : (
                 <>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Item
+                  <Plus className="w-5 h-5" />
+                  <span>Add Item</span>
                 </>
               )}
-            </button>
+            </motion.button>
           </div>
         </form>
-      </div>
-    </>
+      </motion.div>
+    </div>
   )
 }
 
-export default AddItemPage 
+export default AddItemPage

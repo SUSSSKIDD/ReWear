@@ -18,12 +18,6 @@ const itemSchema = new mongoose.Schema({
     required: true,
     enum: ['tops', 'bottoms', 'dresses', 'outerwear', 'shoes', 'accessories']
   },
-  type: {
-    type: String,
-    required: true,
-    trim: true,
-    maxlength: 50
-  },
   size: {
     type: String,
     required: true,
@@ -40,24 +34,22 @@ const itemSchema = new mongoose.Schema({
     maxlength: 50,
     default: 'Unknown'
   },
-  color: {
-    type: String,
-    required: true,
-    trim: true,
-    maxlength: 30
-  },
   material: {
     type: String,
     trim: true,
     maxlength: 100
   },
   images: [{
-    url: {
-      type: String,
+    data: {
+      type: String, // Base64 encoded image data
       required: true
     },
-    publicId: {
-      type: String,
+    contentType: {
+      type: String, // MIME type (e.g., 'image/jpeg', 'image/png')
+      required: true
+    },
+    filename: {
+      type: String, // Original filename
       required: true
     }
   }],
@@ -74,8 +66,8 @@ const itemSchema = new mongoose.Schema({
   pointsValue: {
     type: Number,
     required: true,
-    min: 10,
-    max: 1000
+    min: 1,
+    max: 10000
   },
   isAvailable: {
     type: Boolean,
@@ -83,7 +75,7 @@ const itemSchema = new mongoose.Schema({
   },
   isApproved: {
     type: Boolean,
-    default: false
+    default: true
   },
   isRejected: {
     type: Boolean,
@@ -156,7 +148,7 @@ itemSchema.index({ title: 'text', description: 'text', tags: 'text' });
 
 // Virtual for main image
 itemSchema.virtual('mainImage').get(function() {
-  return this.images.length > 0 ? this.images[0].url : null;
+  return this.images.length > 0 ? this.images[0] : null;
 });
 
 // Virtual for owner info (populated)

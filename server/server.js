@@ -4,13 +4,17 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
+const path = require('path');
 require('dotenv').config();
+
+
 
 const authRoutes = require('./routes/auth');
 const itemRoutes = require('./routes/items');
 const swapRoutes = require('./routes/swaps');
 const userRoutes = require('./routes/users');
 const adminRoutes = require('./routes/admin');
+const { getItemImage, getUserAvatar, base64ToBuffer } = require('./utils/imageUtils');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -26,8 +30,26 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // CORS configuration
+const allowedOrigins = [
+  process.env.CLIENT_URL || 'http://localhost:3000',
+  'http://localhost:5173', // Vite default port
+  'http://localhost:3000', // Alternative port
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:5173'
+];
+
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 
@@ -37,6 +59,57 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Logging middleware
 app.use(morgan('combined'));
+
+// Serve uploaded images (legacy support)
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Route to serve base64 images
+app.get('/api/images/:type/:id', async (req, res) => {
+  try {
+    const { type, id } = req.params;
+    const imageIndex = parseInt(req.query.index) || 0;
+    
+    let imageData = null;
+    
+    if (type === 'item') {
+      // Handle item images
+      imageData = await getItemImage(id, imageIndex);
+    } else if (type === 'avatar') {
+      // Handle avatar images
+      imageData = await getUserAvatar(id);
+    } else {
+      return res.status(400).json({ message: 'Invalid image type' });
+    }
+    
+    if (!imageData || !imageData.data) {
+      return res.status(404).json({ message: 'Image not found' });
+    }
+    
+    // Convert base64 to buffer
+    const imageBuffer = base64ToBuffer(imageData.data);
+    if (!imageBuffer) {
+      return res.status(500).json({ message: 'Error processing image' });
+    }
+    
+    // Set appropriate headers
+    res.set({
+      'Content-Type': imageData.contentType || 'image/jpeg',
+      'Content-Length': imageBuffer.length,
+      'Cache-Control': 'public, max-age=31536000', // Cache for 1 year
+      'ETag': `"${id}-${imageIndex}"`,
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET',
+      'Access-Control-Allow-Headers': 'Content-Type'
+    });
+    
+    // Send the image
+    res.send(imageBuffer);
+    
+  } catch (error) {
+    console.error('Image serving error:', error);
+    res.status(500).json({ message: 'Error serving image' });
+  }
+});
 
 // Routes
 app.use('/api/auth', authRoutes);

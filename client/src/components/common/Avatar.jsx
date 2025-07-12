@@ -1,4 +1,5 @@
 import { User } from 'lucide-react'
+import { getUserAvatarUrl } from '../../utils/imageUtils'
 
 const Avatar = ({ user, size = 'md', className = '' }) => {
   const sizeClasses = {
@@ -13,11 +14,12 @@ const Avatar = ({ user, size = 'md', className = '' }) => {
     return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase()
   }
 
-  if (user?.avatar) {
+  const avatarUrl = getUserAvatarUrl(user);
+  if (avatarUrl) {
     return (
       <div className={`${sizeClasses[size]} ${className} rounded-full overflow-hidden`}>
         <img
-          src={user.avatar}
+          src={avatarUrl}
           alt={`${user.firstName} ${user.lastName}`}
           className="w-full h-full object-cover"
         />

@@ -7,13 +7,26 @@ const authenticateToken = async (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
+    console.log('Auth middleware - authHeader:', authHeader);
+    console.log('Auth middleware - token:', token ? 'present' : 'missing');
+    console.log('Auth middleware - JWT_SECRET:', process.env.JWT_SECRET ? 'set' : 'missing');
+
     if (!token) {
       return res.status(401).json({ 
         message: 'Access token required' 
       });
     }
 
+    if (!process.env.JWT_SECRET) {
+      console.error('JWT_SECRET is not set in environment variables');
+      return res.status(500).json({ 
+        message: 'Server configuration error' 
+      });
+    }
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log('Auth middleware - decoded userId:', decoded.userId);
+    
     const user = await User.findById(decoded.userId).select('-password');
 
     if (!user) {
@@ -22,9 +35,12 @@ const authenticateToken = async (req, res, next) => {
       });
     }
 
+    console.log('Auth middleware - user found:', user.username);
     req.user = user;
     next();
   } catch (error) {
+    console.error('Auth middleware error:', error);
+    
     if (error.name === 'JsonWebTokenError') {
       return res.status(401).json({ 
         message: 'Invalid token' 
@@ -35,7 +51,6 @@ const authenticateToken = async (req, res, next) => {
       });
     }
     
-    console.error('Auth middleware error:', error);
     res.status(500).json({ 
       message: 'Authentication error' 
     });

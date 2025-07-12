@@ -172,6 +172,7 @@ router.get('/top', [
 router.get('/stats', authenticateToken, async (req, res) => {
   try {
     const userId = req.user._id;
+    console.log('Getting stats for user:', userId);
 
     // Get user's items
     const itemsCount = await Item.countDocuments({ owner: userId });
@@ -181,6 +182,8 @@ router.get('/stats', authenticateToken, async (req, res) => {
       isApproved: true,
       isRejected: false
     });
+    
+    console.log('Items count:', itemsCount, 'Available items:', availableItemsCount);
 
     // Get user's swaps
     const totalSwaps = await Swap.countDocuments({

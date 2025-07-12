@@ -36,8 +36,14 @@ const userSchema = new mongoose.Schema({
     maxlength: 30
   },
   avatar: {
-    type: String,
-    default: null
+    data: {
+      type: String, // Base64 encoded image data
+      default: null
+    },
+    contentType: {
+      type: String, // MIME type (e.g., 'image/jpeg', 'image/png')
+      default: null
+    }
   },
   bio: {
     type: String,

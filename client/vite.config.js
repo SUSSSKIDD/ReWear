@@ -56,7 +56,7 @@ export default defineConfig({
             }
           },
           {
-            urlPattern: /^https:\/\/res\.cloudinary\.com\/.*/i,
+            urlPattern: /^https:\/\/localhost:5000\/api\/images\/.*/i,
             handler: 'CacheFirst',
             options: {
               cacheName: 'image-cache',
