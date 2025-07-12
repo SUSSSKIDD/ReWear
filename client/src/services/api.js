@@ -66,6 +66,10 @@ export const itemsAPI = {
   delete: (id) => api.delete(`/items/${id}`),
   toggleLike: (id) => api.post(`/items/${id}/like`),
   getByUser: (userId, params) => api.get(`/items/user/${userId}`, { params }),
+  redeemByOwner: (id) => {
+    console.log('API call: redeemByOwner for item ID:', id)
+    return api.post(`/items/${id}/redeem-owner`)
+  },
 }
 
 // Swaps API

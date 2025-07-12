@@ -143,6 +143,8 @@ router.get('/featured', async (req, res) => {
   }
 });
 
+
+
 // @route   GET /api/items/:id
 // @desc    Get item by ID
 // @access  Public
@@ -442,6 +444,72 @@ router.post('/:id/like', authenticateToken, async (req, res) => {
     console.error('Toggle like error:', error);
     res.status(500).json({ 
       message: 'Error toggling like' 
+    });
+  }
+});
+
+// @route   POST /api/items/:id/redeem-owner
+// @desc    Owner redeems their own item with points
+// @access  Private (owner only)
+router.post('/:id/redeem-owner', authenticateToken, async (req, res) => {
+  try {
+    const item = await Item.findById(req.params.id);
+    
+    if (!item) {
+      return res.status(404).json({ 
+        message: 'Item not found' 
+      });
+    }
+
+    // Check if user is the owner
+    if (item.owner.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ 
+        message: 'Only the item owner can redeem this item' 
+      });
+    }
+
+    // Check if item is available
+    if (!item.isAvailable) {
+      return res.status(400).json({ 
+        message: 'Item is not available for redemption' 
+      });
+    }
+
+    // Check if user has enough points
+    if (req.user.points < item.pointsValue) {
+      return res.status(400).json({ 
+        message: 'Insufficient points balance' 
+      });
+    }
+
+    // Deduct points from user
+    await User.findByIdAndUpdate(req.user._id, {
+      $inc: { points: -item.pointsValue }
+    });
+
+    // Mark item as unavailable and add redemption info
+    await Item.findByIdAndUpdate(req.params.id, {
+      isAvailable: false,
+      redeemedBy: req.user._id,
+      redeemedAt: new Date(),
+      redemptionType: 'owner_purchase'
+    });
+
+    // Update user's items count
+    await User.findByIdAndUpdate(req.user._id, {
+      $inc: { itemsCount: -1 }
+    });
+
+    res.json({
+      message: 'Item redeemed successfully',
+      pointsDeducted: item.pointsValue,
+      newBalance: req.user.points - item.pointsValue
+    });
+
+  } catch (error) {
+    console.error('Owner redemption error:', error);
+    res.status(500).json({ 
+      message: 'Error redeeming item' 
     });
   }
 });

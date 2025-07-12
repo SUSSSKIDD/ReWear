@@ -33,7 +33,7 @@ const DashboardPage = () => {
     }
   }, [location.state, queryClient])
 
-  const { data: stats, isLoading: statsLoading } = useQuery({
+  const { data: stats, isLoading: statsLoading, error: statsError } = useQuery({
     queryKey: ['userStats'],
     queryFn: () => usersAPI.getStats(),
     enabled: !!user,
@@ -44,10 +44,12 @@ const DashboardPage = () => {
 
   // Debug logging
   console.log('Dashboard - stats data:', stats)
+  console.log('Dashboard - stats data structure:', stats?.data?.stats)
   console.log('Dashboard - stats loading:', statsLoading)
+  console.log('Dashboard - stats error:', statsError)
   console.log('Dashboard - location state:', location.state)
 
-  const { data: activity, isLoading: activityLoading } = useQuery({
+  const { data: activity, isLoading: activityLoading, error: activityError } = useQuery({
     queryKey: ['userActivity'],
     queryFn: () => usersAPI.getActivity({ limit: 5 }),
     enabled: !!user,
@@ -55,6 +57,10 @@ const DashboardPage = () => {
     staleTime: 0, // Always refetch when invalidated
     refetchInterval: 60000 // Refetch every minute
   })
+
+  // Debug logging for activity
+  console.log('Dashboard - activity data:', activity)
+  console.log('Dashboard - activity error:', activityError)
 
   if (statsLoading || activityLoading) {
     return (
@@ -64,31 +70,45 @@ const DashboardPage = () => {
     )
   }
 
+  // Handle errors gracefully
+  if (statsError || activityError) {
+    console.error('Dashboard errors:', { statsError, activityError })
+  }
+
+  // Fallback values in case API fails
+  const fallbackStats = {
+    items: { total: 0, available: 0 },
+    swaps: { total: 0, completed: 0, pending: 0 },
+    points: user?.points || 0,
+    rating: user?.rating || 0,
+    reviewsCount: user?.reviewsCount || 0
+  }
+
   const statCards = [
     {
       title: 'Total Items',
-      value: stats?.stats?.items?.total || 0,
+      value: stats?.data?.stats?.items?.total || stats?.stats?.items?.total || fallbackStats.items.total,
       icon: Package,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50'
     },
     {
       title: 'Available Items',
-      value: stats?.stats?.items?.available || 0,
+      value: stats?.data?.stats?.items?.available || stats?.stats?.items?.available || fallbackStats.items.available,
       icon: Package,
       color: 'text-green-600',
       bgColor: 'bg-green-50'
     },
     {
       title: 'Total Swaps',
-      value: stats?.stats?.swaps?.total || 0,
+      value: stats?.data?.stats?.swaps?.total || stats?.stats?.swaps?.total || fallbackStats.swaps.total,
       icon: Users,
       color: 'text-purple-600',
       bgColor: 'bg-purple-50'
     },
     {
       title: 'Points Balance',
-      value: stats?.stats?.points || 0,
+      value: stats?.data?.stats?.points || stats?.stats?.points || fallbackStats.points,
       icon: Heart,
       color: 'text-red-600',
       bgColor: 'bg-red-50'
@@ -241,8 +261,8 @@ const DashboardPage = () => {
             </div>
 
             <div className="space-y-4">
-              {activity?.activities?.length > 0 ? (
-                activity.activities.map((item, index) => (
+              {activity?.data?.activities?.length > 0 || activity?.activities?.length > 0 ? (
+                (activity?.data?.activities || activity?.activities || []).map((item, index) => (
                   <motion.div 
                     key={index} 
                     className="flex items-center p-4 rounded-lg bg-white border border-gray-200 hover:border-indigo-200 transition-all shadow-sm hover:shadow-md"
@@ -300,7 +320,7 @@ const DashboardPage = () => {
               )}
             </div>
 
-            {activity?.activities?.length > 0 && (
+            {(activity?.data?.activities?.length > 0 || activity?.activities?.length > 0) && (
               <div className="mt-6 text-right">
                 <Link
                   to="/users/activity"

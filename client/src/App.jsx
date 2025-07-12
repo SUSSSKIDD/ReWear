@@ -15,6 +15,7 @@ import ItemDetailPage from './pages/Items/ItemDetailPage'
 import AddItemPage from './pages/Items/AddItemPage'
 import SwapsPage from './pages/Swaps/SwapsPage'
 import SwapDetailPage from './pages/Swaps/SwapDetailPage'
+import AdminPage from './pages/Admin/AdminPage'
 import NotFoundPage from './pages/NotFoundPage'
 
 function App() {
@@ -51,6 +52,11 @@ function App() {
             <Route path="/swaps" element={<SwapsPage />} />
             <Route path="/swaps/:id" element={<SwapDetailPage />} />
           </Route>
+        </Route>
+        
+        {/* Admin Routes */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/admin" element={<AdminPage />} />
         </Route>
         
         {/* 404 Route */}

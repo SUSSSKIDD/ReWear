@@ -207,24 +207,6 @@ router.get('/stats', authenticateToken, async (req, res) => {
       ]
     });
 
-    // Get recent activity
-    const recentItems = await Item.find({ owner: userId })
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .select('title images createdAt');
-
-    const recentSwaps = await Swap.find({
-      $or: [
-        { requester: userId },
-        { 'requestedItem.owner': userId }
-      ]
-    })
-    .sort({ createdAt: -1 })
-    .limit(5)
-    .populate('requestedItem', 'title images')
-    .populate('offeredItem', 'title images')
-    .select('status type createdAt');
-
     const stats = {
       items: {
         total: itemsCount,
@@ -235,13 +217,9 @@ router.get('/stats', authenticateToken, async (req, res) => {
         completed: completedSwaps,
         pending: pendingSwaps
       },
-      points: req.user.points,
-      rating: req.user.rating,
-      reviewsCount: req.user.reviewsCount,
-      recentActivity: {
-        items: recentItems,
-        swaps: recentSwaps
-      }
+      points: req.user.points || 0,
+      rating: req.user.rating || 0,
+      reviewsCount: req.user.reviewsCount || 0
     };
 
     res.json({
@@ -302,8 +280,8 @@ router.get('/activity', [
       .skip(skip)
       .limit(parseInt(limit))
       .populate('requestedItem', 'title images')
-      .populate('offeredItem', 'title images')
-      .select('status type createdAt')
+      .populate('offeredItems', 'title images')
+      .select('status swapType createdAt')
     ]);
 
     // Combine and sort activities

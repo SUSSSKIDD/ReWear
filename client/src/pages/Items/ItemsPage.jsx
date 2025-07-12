@@ -9,6 +9,7 @@ import {
   List,
   SlidersHorizontal,
   X,
+  Plus,
   Package
 } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
@@ -16,6 +17,7 @@ import { itemsAPI } from '../../services/api'
 import ItemCard from '../../components/items/ItemCard'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import FilterSidebar from '../../components/items/FilterSidebar'
+import { motion } from 'framer-motion'
 
 const ItemsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -29,7 +31,8 @@ const ItemsPage = () => {
     minPoints: searchParams.get('minPoints') || '',
     maxPoints: searchParams.get('maxPoints') || '',
     sortBy: searchParams.get('sortBy') || 'createdAt',
-    sortOrder: searchParams.get('sortOrder') || 'desc'
+    sortOrder: searchParams.get('sortOrder') || 'desc',
+    page: searchParams.get('page') || 1
   })
 
   const { data, isLoading, error } = useQuery({
@@ -38,25 +41,17 @@ const ItemsPage = () => {
     keepPreviousData: true
   })
 
-  // Debug logging
-  console.log('ItemsPage - filters:', filters);
-  console.log('ItemsPage - data:', data);
-  console.log('ItemsPage - error:', error);
-  console.log('ItemsPage - items length:', data?.data?.items?.length);
-
-
-
   // Update URL when filters change
   useEffect(() => {
     const params = new URLSearchParams()
     Object.entries(filters).forEach(([key, value]) => {
-      if (value) params.set(key, value)
+      if (value && key !== 'page') params.set(key, value)
     })
     setSearchParams(params)
   }, [filters, setSearchParams])
 
   const handleFilterChange = (newFilters) => {
-    setFilters(prev => ({ ...prev, ...newFilters, page: 1 }))
+    setFilters(prev => ({ ...prev, ...newFilters }))
   }
 
   const handleSearch = (searchTerm) => {
@@ -72,63 +67,88 @@ const ItemsPage = () => {
       minPoints: '',
       maxPoints: '',
       sortBy: 'createdAt',
-      sortOrder: 'desc'
+      sortOrder: 'desc',
+      page: 1
     })
   }
 
-  const hasActiveFilters = Object.values(filters).some(value => value && value !== 'createdAt' && value !== 'desc')
+  const hasActiveFilters = Object.entries(filters).some(
+    ([key, value]) => value && !['sortBy', 'sortOrder', 'page'].includes(key)
+  )
 
   return (
-    <>
+    <div className="relative min-h-screen">
+      {/* Background image with low opacity */}
+      <div className="absolute inset-0 -z-10 overflow-hidden">
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1483985988355-763728e1935b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2000&q=80')] bg-cover bg-center opacity-30"></div>
+      </div>
+
       <Helmet>
         <title>Browse Items - ReWear</title>
         <meta name="description" content="Browse and discover clothing items for swap on ReWear" />
       </Helmet>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <motion.div
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12"
+      >
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-secondary-900 mb-2">
-            Browse Items
-          </h1>
-          <p className="text-secondary-600 mb-4">
-            Discover clothing items from our community
-          </p>
-          
-          {/* Quick Navigation */}
-          <div className="flex flex-wrap gap-2">
-            <Link
-              to="/dashboard"
-              className="inline-flex items-center px-3 py-2 text-sm font-medium text-secondary-600 bg-secondary-50 rounded-lg hover:bg-secondary-100 transition-colors"
-            >
-              Dashboard
-            </Link>
-            <Link
-              to="/swaps"
-              className="inline-flex items-center px-3 py-2 text-sm font-medium text-secondary-600 bg-secondary-50 rounded-lg hover:bg-secondary-100 transition-colors"
-            >
-              Swaps
-            </Link>
-            <Link
-              to="/add-item"
-              className="inline-flex items-center px-3 py-2 text-sm font-medium text-primary-600 bg-primary-50 rounded-lg hover:bg-primary-100 transition-colors"
-            >
-              + Add Item
-            </Link>
-          </div>
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="mb-10 text-center"
+        >
+          <h1 className="text-4xl font-bold text-indigo-700 mb-3">Browse Items</h1>
+          <p className="text-lg text-gray-600">Discover clothing items from our community</p>
+        </motion.div>
+
+        {/* Quick Navigation */}
+        <motion.div 
+          className="flex flex-wrap gap-3 justify-center mb-8"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Link
+            to="/dashboard"
+            className="inline-flex items-center px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
+          >
+            Dashboard
+          </Link>
+          <Link
+            to="/swaps"
+            className="inline-flex items-center px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
+          >
+            Swaps
+          </Link>
+          <Link
+            to="/add-item"
+            className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors shadow-md"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Item
+          </Link>
+        </motion.div>
 
         {/* Search and Filters Bar */}
-        <div className="bg-white rounded-lg shadow-sm border border-secondary-200 p-4 mb-6">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border border-white/50 p-6 mb-8"
+        >
           <div className="flex flex-col lg:flex-row gap-4">
             {/* Search */}
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-400 w-5 h-5" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
                   type="text"
                   placeholder="Search items..."
-                  className="input pl-10 w-full"
+                  className="w-full px-4 py-3 pl-10 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition bg-white/80"
                   value={filters.search}
                   onChange={(e) => handleSearch(e.target.value)}
                 />
@@ -136,72 +156,98 @@ const ItemsPage = () => {
             </div>
 
             {/* Filter Toggle */}
-            <div className="flex items-center space-x-2">
-              <button
+            <div className="flex items-center gap-3">
+              <motion.button
                 onClick={() => setShowFilters(!showFilters)}
-                className="btn btn-outline"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                className="px-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-700 font-medium flex items-center gap-2 hover:bg-gray-50 transition"
               >
-                <Filter className="w-4 h-4 mr-2" />
+                <SlidersHorizontal className="w-4 h-4" />
                 Filters
-              </button>
+              </motion.button>
 
               {/* View Mode Toggle */}
-              <div className="flex border border-secondary-300 rounded-lg">
-                <button
+              <div className="flex border border-gray-300 rounded-lg overflow-hidden bg-white">
+                <motion.button
                   onClick={() => setViewMode('grid')}
-                  className={`p-2 ${viewMode === 'grid' ? 'bg-primary-600 text-white' : 'text-secondary-600'}`}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className={`p-2.5 ${viewMode === 'grid' ? 'bg-indigo-600 text-white' : 'text-gray-600'}`}
                 >
                   <Grid className="w-4 h-4" />
-                </button>
-                <button
+                </motion.button>
+                <motion.button
                   onClick={() => setViewMode('list')}
-                  className={`p-2 ${viewMode === 'list' ? 'bg-primary-600 text-white' : 'text-secondary-600'}`}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className={`p-2.5 ${viewMode === 'list' ? 'bg-indigo-600 text-white' : 'text-gray-600'}`}
                 >
                   <List className="w-4 h-4" />
-                </button>
+                </motion.button>
               </div>
             </div>
           </div>
 
           {/* Active Filters */}
           {hasActiveFilters && (
-            <div className="flex items-center flex-wrap gap-2 mt-4 pt-4 border-t border-secondary-200">
-              <span className="text-sm text-secondary-600">Active filters:</span>
+            <motion.div 
+              className="flex items-center flex-wrap gap-2 mt-4 pt-4 border-t border-gray-200"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              <span className="text-sm text-gray-600">Active filters:</span>
               {filters.category && (
-                <span className="badge badge-primary">
+                <motion.span 
+                  className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-700"
+                  initial={{ scale: 0.8 }}
+                  animate={{ scale: 1 }}
+                >
                   {filters.category}
                   <button
                     onClick={() => handleFilterChange({ category: '' })}
-                    className="ml-1"
+                    className="ml-1.5 -mr-1"
                   >
                     <X className="w-3 h-3" />
                   </button>
-                </span>
+                </motion.span>
               )}
               {filters.size && (
-                <span className="badge badge-primary">
+                <motion.span 
+                  className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-700"
+                  initial={{ scale: 0.8 }}
+                  animate={{ scale: 1 }}
+                >
                   {filters.size}
                   <button
                     onClick={() => handleFilterChange({ size: '' })}
-                    className="ml-1"
+                    className="ml-1.5 -mr-1"
                   >
                     <X className="w-3 h-3" />
                   </button>
-                </span>
+                </motion.span>
               )}
               {filters.condition && (
-                <span className="badge badge-primary">
+                <motion.span 
+                  className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-700"
+                  initial={{ scale: 0.8 }}
+                  animate={{ scale: 1 }}
+                >
                   {filters.condition}
                   <button
                     onClick={() => handleFilterChange({ condition: '' })}
-                    className="ml-1"
+                    className="ml-1.5 -mr-1"
                   >
                     <X className="w-3 h-3" />
                   </button>
-                </span>
+                </motion.span>
               )}
               {(filters.minPoints || filters.maxPoints) && (
-                <span className="badge badge-primary">
+                <motion.span 
+                  className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-700"
+                  initial={{ scale: 0.8 }}
+                  animate={{ scale: 1 }}
+                >
                   {filters.minPoints && filters.maxPoints 
                     ? `${filters.minPoints}-${filters.maxPoints} points`
                     : filters.minPoints 
@@ -210,21 +256,22 @@ const ItemsPage = () => {
                   }
                   <button
                     onClick={() => handleFilterChange({ minPoints: '', maxPoints: '' })}
-                    className="ml-1"
+                    className="ml-1.5 -mr-1"
                   >
                     <X className="w-3 h-3" />
                   </button>
-                </span>
+                </motion.span>
               )}
-              <button
+              <motion.button
                 onClick={clearFilters}
-                className="text-sm text-primary-600 hover:text-primary-500"
+                whileHover={{ scale: 1.05 }}
+                className="text-sm text-indigo-600 hover:text-indigo-500 font-medium"
               >
                 Clear all
-              </button>
-            </div>
+              </motion.button>
+            </motion.div>
           )}
-        </div>
+        </motion.div>
 
         <div className="flex gap-6">
           {/* Filters Sidebar */}
@@ -243,23 +290,31 @@ const ItemsPage = () => {
               </div>
             ) : error ? (
               <div className="text-center py-12">
-                <p className="text-secondary-600">Error loading items</p>
+                <p className="text-gray-600">Error loading items</p>
               </div>
             ) : data?.data?.items?.length === 0 ? (
-              <div className="text-center py-12">
-                <Package className="w-12 h-12 text-secondary-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-secondary-900 mb-2">
+              <motion.div 
+                className="text-center py-12 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border border-white/50"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-800 mb-2">
                   No items found
                 </h3>
-                <p className="text-secondary-600">
+                <p className="text-gray-600">
                   Try adjusting your filters or search terms
                 </p>
-              </div>
+              </motion.div>
             ) : (
               <>
                 {/* Results Count */}
-                <div className="flex justify-between items-center mb-6">
-                  <p className="text-secondary-600">
+                <motion.div 
+                  className="flex justify-between items-center mb-6 bg-white/90 backdrop-blur-sm rounded-lg p-4 shadow-sm border border-white/50"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                >
+                  <p className="text-gray-600">
                     {data?.data?.pagination?.totalItems || 0} items found
                   </p>
                   <select
@@ -268,7 +323,7 @@ const ItemsPage = () => {
                       const [sortBy, sortOrder] = e.target.value.split('-')
                       handleFilterChange({ sortBy, sortOrder })
                     }}
-                    className="select"
+                    className="px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition bg-white"
                   >
                     <option value="createdAt-desc">Newest first</option>
                     <option value="createdAt-asc">Oldest first</option>
@@ -276,62 +331,84 @@ const ItemsPage = () => {
                     <option value="pointsValue-desc">Price: High to Low</option>
                     <option value="views-desc">Most Popular</option>
                   </select>
-                </div>
+                </motion.div>
 
                 {/* Items Grid */}
-                <div className={`grid gap-6 ${
-                  viewMode === 'grid' 
-                    ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
-                    : 'grid-cols-1'
-                }`}>
+                <motion.div
+                  className={`grid gap-6 ${
+                    viewMode === 'grid' 
+                      ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
+                      : 'grid-cols-1'
+                  }`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ staggerChildren: 0.1 }}
+                >
                   {data?.data?.items?.map((item) => (
-                    <ItemCard key={item._id} item={item} viewMode={viewMode} />
+                    <motion.div
+                      key={item._id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      whileHover={{ scale: 1.02 }}
+                    >
+                      <ItemCard item={item} viewMode={viewMode} />
+                    </motion.div>
                   ))}
-                </div>
+                </motion.div>
 
                 {/* Pagination */}
                 {data?.data?.pagination && data.data.pagination.totalPages > 1 && (
-                  <div className="flex justify-center mt-8">
-                    <div className="flex items-center space-x-2">
-                      <button
+                  <motion.div 
+                    className="flex justify-center mt-8"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <motion.button
                         onClick={() => handleFilterChange({ page: data.data.pagination.currentPage - 1 })}
                         disabled={!data.data.pagination.hasPrev}
-                        className="btn btn-outline btn-sm"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition disabled:opacity-50"
                       >
                         Previous
-                      </button>
+                      </motion.button>
                       
                       {Array.from({ length: data.data.pagination.totalPages }, (_, i) => i + 1).map((page) => (
-                        <button
+                        <motion.button
                           key={page}
                           onClick={() => handleFilterChange({ page })}
-                          className={`btn btn-sm ${
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          className={`px-4 py-2 rounded-lg font-medium ${
                             page === data.data.pagination.currentPage 
-                              ? 'btn-primary' 
-                              : 'btn-outline'
+                              ? 'bg-indigo-600 text-white' 
+                              : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
                           }`}
                         >
                           {page}
-                        </button>
+                        </motion.button>
                       ))}
                       
-                      <button
+                      <motion.button
                         onClick={() => handleFilterChange({ page: data.data.pagination.currentPage + 1 })}
                         disabled={!data.data.pagination.hasNext}
-                        className="btn btn-outline btn-sm"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition disabled:opacity-50"
                       >
                         Next
-                      </button>
+                      </motion.button>
                     </div>
-                  </div>
+                  </motion.div>
                 )}
               </>
             )}
           </div>
         </div>
-      </div>
-    </>
+      </motion.div>
+    </div>
   )
 }
 
-export default ItemsPage 
+export default ItemsPage

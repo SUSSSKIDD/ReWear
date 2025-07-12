@@ -206,6 +206,9 @@ router.get('/', [
 
     res.json({
       swaps,
+      user: {
+        _id: req.user._id
+      },
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(total / parseInt(limit)),
@@ -299,7 +302,13 @@ router.put('/:id/respond', [
     }
 
     // Check if user owns the requested item
-    if (swap.requestedItem.owner.toString() !== req.user._id.toString()) {
+    const requestedItemOwner = swap.requestedItem.owner?._id || swap.requestedItem.owner;
+    if (requestedItemOwner.toString() !== req.user._id.toString()) {
+      console.log('Ownership check failed:', {
+        requestedItemOwner: requestedItemOwner.toString(),
+        userId: req.user._id.toString(),
+        swapId: swap._id
+      });
       return res.status(403).json({ 
         message: 'You can only respond to swaps for your own items' 
       });
@@ -341,12 +350,12 @@ router.put('/:id/respond', [
 
         await swap.save();
 
-        // Update user stats
+        // Update user stats and give bonus points for successful swap
         await User.findByIdAndUpdate(swap.requester, {
-          $inc: { swapsCount: 1 }
+          $inc: { swapsCount: 1, points: 100 }
         });
         await User.findByIdAndUpdate(swap.requestedItem.owner, {
-          $inc: { swapsCount: 1 }
+          $inc: { swapsCount: 1, points: 100 }
         });
 
       } else {
@@ -374,6 +383,12 @@ router.put('/:id/respond', [
         });
         await User.findByIdAndUpdate(swap.requestedItem.owner, {
           $inc: { swapsCount: 1 }
+        });
+        await User.findByIdAndUpdate(swap.requester, {
+          $inc: { swapsCount: 1, points: 100 }
+        });
+        await User.findByIdAndUpdate(swap.requestedItem.owner, {
+          $inc: { swapsCount: 1, points: 100 }
         });
       }
 

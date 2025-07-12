@@ -133,6 +133,18 @@ const itemSchema = new mongoose.Schema({
   style: {
     type: String,
     enum: ['casual', 'formal', 'business', 'sporty', 'vintage', 'bohemian', 'minimalist', 'streetwear']
+  },
+  // Redemption fields
+  redeemedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  redeemedAt: {
+    type: Date
+  },
+  redemptionType: {
+    type: String,
+    enum: ['owner_purchase', 'swap_redeem']
   }
 }, {
   timestamps: true

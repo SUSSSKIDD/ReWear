@@ -7,7 +7,8 @@ import {
   LogOut, 
   Settings, 
   Plus,
-  Bell
+  Bell,
+  Shield
 } from 'lucide-react'
 import Avatar from '../common/Avatar'
 
@@ -24,6 +25,10 @@ const Header = () => {
 
   const userNavigation = [
     { name: 'Dashboard', href: '/dashboard' },
+  ]
+
+  const adminNavigation = [
+    { name: 'Admin Panel', href: '/admin' },
   ]
 
   const isActive = (path) => location.pathname === path
@@ -73,6 +78,20 @@ const Header = () => {
                 {item.name}
               </Link>
             ))}
+            {user && user.role === 'admin' && adminNavigation.map((item) => (
+              <Link
+                key={item.name}
+                to={item.href}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-1 ${
+                  isActive(item.href)
+                    ? 'text-red-600 bg-red-50'
+                    : 'text-red-600 hover:text-red-700 hover:bg-red-50'
+                }`}
+              >
+                <Shield className="w-4 h-4" />
+                <span>{item.name}</span>
+              </Link>
+            ))}
           </nav>
 
           {/* Right side */}
@@ -115,6 +134,16 @@ const Header = () => {
                     <Settings className="w-4 h-4" />
                     <span>Dashboard</span>
                   </Link>
+                  {user.role === 'admin' && (
+                    <Link
+                      to="/admin"
+                      className="flex items-center space-x-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                      onClick={() => setIsUserMenuOpen(false)}
+                    >
+                      <Shield className="w-4 h-4" />
+                      <span>Admin Panel</span>
+                    </Link>
+                  )}
                   <button
                     onClick={handleLogout}
                     className="flex items-center space-x-2 px-4 py-2 text-sm text-secondary-700 hover:bg-secondary-50 w-full text-left"
@@ -184,6 +213,21 @@ const Header = () => {
                       onClick={() => setIsMenuOpen(false)}
                     >
                       {item.name}
+                    </Link>
+                  ))}
+                  {user.role === 'admin' && adminNavigation.map((item) => (
+                    <Link
+                      key={item.name}
+                      to={item.href}
+                      className={`block px-3 py-2 rounded-md text-base font-medium transition-colors flex items-center space-x-2 ${
+                        isActive(item.href)
+                          ? 'text-red-600 bg-red-50'
+                          : 'text-red-600 hover:text-red-700 hover:bg-red-50'
+                      }`}
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <Shield className="w-4 h-4" />
+                      <span>{item.name}</span>
                     </Link>
                   ))}
                   <Link
